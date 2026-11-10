@@ -1,0 +1,17 @@
+workflows:
+  vyro-android:
+    name: VYRO Android APK
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Build VYRO APK
+        script: |
+          unzip -o VYRO_flutter_stage2.zip
+          cd vyro_flutter_starter
+          flutter create --platforms=android .
+          flutter pub get
+          flutter build apk --release
+    artifacts:
+      - vyro_flutter_starter/build/app/outputs/flutter-apk/app-release.apk
