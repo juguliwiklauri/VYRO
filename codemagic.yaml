@@ -1,3 +1,4 @@
+
 workflows:
   vyro-android:
     name: VYRO Android APK
@@ -5,13 +6,79 @@ workflows:
     instance_type: linux_x2
     environment:
       flutter: stable
+
     scripts:
-      - name: Build VYRO APK
+      - name: Prepare and build VYRO
         script: |
-          unzip -o VYRO_flutter_stage2.zip
-          cd vyro_flutter_starter
+          set -e
+
+          python3 - <<'PY'
+          import zipfile
+          import pathlib
+          import shutil
+          import sys
+
+          root = pathlib.Path.cwd()
+          archives = sorted(
+              [p for p in root.iterdir()
+               if p.is_file() and p.suffix.lower() == ".zip"],
+              key=lambda p: (0 if "vyro_upload" in p.name.lower() else 1, p.name)
+          )
+
+          selected = None
+
+          for archive in archives:
+              try:
+                  with zipfile.ZipFile(archive) as z:
+                      files = [
+                          n for n in z.namelist()
+                          if pathlib.PurePosixPath(n).name == "pubspec.yaml"
+                      ]
+                      if files:
+                          selected = (archive, files[0])
+                          break
+              except zipfile.BadZipFile:
+                  continue
+
+          if selected is None:
+              print("ERROR: Flutter project ZIP not found")
+              sys.exit(1)
+
+          archive, pubspec = selected
+          prefix = str(pathlib.PurePosixPath(pubspec).parent)
+          if prefix == ".":
+              prefix = ""
+
+          dest = root / "vyro_project"
+          if dest.exists():
+              shutil.rmtree(dest)
+          dest.mkdir()
+
+          with zipfile.ZipFile(archive) as z:
+              for item in z.infolist():
+                  path = pathlib.PurePosixPath(item.filename)
+                  if path.is_absolute() or ".." in path.parts:
+                      continue
+                  if prefix and not str(path).startswith(prefix + "/"):
+                      continue
+                  rel = path.relative_to(pathlib.PurePosixPath(prefix)) if prefix else path
+                  if not rel.parts:
+                      continue
+                  target = dest.joinpath(*rel.parts)
+                  if item.is_dir():
+                      target.mkdir(parents=True, exist_ok=True)
+                  else:
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      with z.open(item) as src, target.open("wb") as out:
+                          shutil.copyfileobj(src, out)
+
+          print("Flutter project prepared:", archive.name)
+          PY
+
+          cd vyro_project
           flutter create --platforms=android .
           flutter pub get
           flutter build apk --release
+
     artifacts:
-      - vyro_flutter_starter/build/app/outputs/flutter-apk/app-release.apk
+      - vyro_project/build/app/outputs/flutter-apk/app-release.apk
