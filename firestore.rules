@@ -8,16 +8,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
-
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid)
-        && request.resource.data.uid == uid;
-      allow update: if isOwner(uid);
-      allow delete: if isOwner(uid);
+      allow create: if signedIn()
+        && request.auth.uid == uid;
+      allow update, delete: if signedIn()
+        && request.auth.uid == uid;
     }
 
     match /usernames/{username} {
@@ -31,6 +27,20 @@ service cloud.firestore {
         );
 
       allow update, delete: if false;
+    }
+
+    match /videos/{videoId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
     }
   }
 }
