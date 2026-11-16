@@ -32,8 +32,7 @@ class CommentService {
       throw Exception('მომხმარებლის პროფილი ვერ მოიძებნა.');
     }
 
-    final username =
-        userDoc.data()?['username'] ?? 'მომხმარებელი';
+    final username = userDoc.data()?['username'] ?? 'მომხმარებელი';
 
     await _db.runTransaction((transaction) async {
       final video = await transaction.get(videoRef);
@@ -42,12 +41,18 @@ class CommentService {
         throw Exception('ვიდეო ვერ მოიძებნა.');
       }
 
+      final currentCount = (video.data()?['commentsCount'] ?? 0) as int;
+
       transaction.set(commentRef, {
         'commentId': commentRef.id,
         'userId': user.uid,
         'username': username,
         'text': message,
         'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(videoRef, {
+        'commentsCount': currentCount + 1,
       });
     });
   }
@@ -62,14 +67,12 @@ class CommentService {
       throw Exception('საჭიროა ავტორიზაცია.');
     }
 
-    final commentRef = _db
-        .collection('videos')
-        .doc(videoId)
-        .collection('comments')
-        .doc(commentId);
+    final videoRef = _db.collection('videos').doc(videoId);
+    final commentRef = videoRef.collection('comments').doc(commentId);
 
     await _db.runTransaction((transaction) async {
       final comment = await transaction.get(commentRef);
+      final video = await transaction.get(videoRef);
 
       if (!comment.exists) {
         throw Exception('კომენტარი ვერ მოიძებნა.');
@@ -79,7 +82,16 @@ class CommentService {
         throw Exception('შეგიძლია მხოლოდ შენი კომენტარის წაშლა.');
       }
 
+      if (!video.exists) {
+        throw Exception('ვიდეო ვერ მოიძებნა.');
+      }
+
+      final currentCount = (video.data()?['commentsCount'] ?? 0) as int;
+
       transaction.delete(commentRef);
+      transaction.update(videoRef, {
+        'commentsCount': currentCount > 0 ? currentCount - 1 : 0,
+      });
     });
   }
 
