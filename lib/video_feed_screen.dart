@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import 'comments_screen.dart';
 import 'services/like_service.dart';
 
 class VideoFeedScreen extends StatelessWidget {
@@ -138,6 +139,17 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
     }
   }
 
+  void _openComments() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CommentsScreen(
+          videoId: widget.videoId,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final caption = widget.data['caption'] as String? ?? '';
@@ -184,7 +196,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
 
         Positioned(
           left: 16,
-          right: 80,
+          right: 85,
           bottom: 35,
           child: Text(
             caption,
@@ -199,7 +211,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
         ),
 
         Positioned(
-          right: 16,
+          right: 14,
           bottom: 45,
           child: Column(
             children: [
@@ -215,9 +227,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
                       liked
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      color: liked
-                          ? Colors.red
-                          : Colors.white,
+                      color: liked ? Colors.red : Colors.white,
                     ),
                   );
                 },
@@ -228,10 +238,33 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
                 builder: (context, snapshot) {
                   return Text(
                     '${snapshot.data ?? 0}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.white),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              IconButton(
+                onPressed: _openComments,
+                iconSize: 34,
+                icon: const Icon(
+                  Icons.comment_outlined,
+                  color: Colors.white,
+                ),
+              ),
+
+              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('videos')
+                    .doc(widget.videoId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data?.data()?['commentsCount'] ?? 0;
+
+                  return Text(
+                    '$count',
+                    style: const TextStyle(color: Colors.white),
                   );
                 },
               ),
