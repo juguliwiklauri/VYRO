@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -9,7 +10,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return await _auth.signInWithEmailAndPassword(
+    return _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
@@ -21,51 +22,65 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final cleanName = displayName.trim();
     final cleanUsername = username.trim().toLowerCase();
+    final cleanEmail = email.trim();
 
-    if (cleanUsername.isEmpty ||
-        !RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(cleanUsername)) {
-      throw Exception('Username must be 3-20 characters.');
+    if (cleanName.isEmpty) {
+      throw Exception('შეიყვანე სახელი.');
     }
 
-    final usernameRef = _db.collection('usernames').doc(cleanUsername);
-    final existing = await usernameRef.get();
+    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(cleanUsername)) {
+      throw Exception('მომხმარებლის სახელი უნდა შეიცავდეს 3-20 ლათინურ სიმბოლოს.');
+    }
 
-    if (existing.exists) {
-      throw Exception('This username is already taken.');
+    if (password.length < 6) {
+      throw Exception('პაროლი მინიმუმ 6 სიმბოლო უნდა იყოს.');
     }
 
     final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
+      email: cleanEmail,
       password: password,
     );
 
     final user = credential.user!;
 
-    await user.updateDisplayName(displayName.trim());
+    try {
+      await _db.runTransaction((transaction) async {
+        final usernameRef =
+            _db.collection('usernames').doc(cleanUsername);
+        final userRef = _db.collection('users').doc(user.uid);
 
-    final batch = _db.batch();
+        final existing = await transaction.get(usernameRef);
 
-    batch.set(usernameRef, {
-      'uid': user.uid,
-      'username': cleanUsername,
-    });
+        if (existing.exists) {
+          throw Exception('ეს მომხმარებლის სახელი უკვე დაკავებულია.');
+        }
 
-    batch.set(_db.collection('users').doc(user.uid), {
-      'uid': user.uid,
-      'displayName': displayName.trim(),
-      'username': cleanUsername,
-      'email': email.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'photoUrl': '',
-      'bio': '',
-      'followersCount': 0,
-      'followingCount': 0,
-    });
+        transaction.set(usernameRef, {
+          'uid': user.uid,
+          'username': cleanUsername,
+        });
 
-    await batch.commit();
+        transaction.set(userRef, {
+          'uid': user.uid,
+          'displayName': cleanName,
+          'username': cleanUsername,
+          'email': cleanEmail,
+          'photoUrl': '',
+          'bio': '',
+          'followersCount': 0,
+          'followingCount': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      });
 
-    return credential;
+      await user.updateDisplayName(cleanName);
+      return credential;
+    } catch (error) {
+      await user.delete();
+      rethrow;
+    }
   }
 
   Future<void> sendPasswordReset(String email) async {
