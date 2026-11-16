@@ -6,6 +6,8 @@ import 'package:video_player/video_player.dart';
 import 'comments_screen.dart';
 import 'services/like_service.dart';
 
+const Color turboYellow = Color(0xFFFFD600);
+
 class VideoFeedScreen extends StatelessWidget {
   const VideoFeedScreen({super.key});
 
@@ -30,9 +32,7 @@ class VideoFeedScreen extends StatelessWidget {
 
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFFFD600),
-              ),
+              child: CircularProgressIndicator(color: turboYellow),
             );
           }
 
@@ -41,8 +41,13 @@ class VideoFeedScreen extends StatelessWidget {
           if (videos.isEmpty) {
             return const Center(
               child: Text(
-                'ჯერ ვიდეოები არ არის. იყავი პირველი!',
-                style: TextStyle(color: Colors.white),
+                'ჯერ ვიდეოები არ არის.\nიყავი პირველი!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  height: 1.6,
+                ),
               ),
             );
           }
@@ -98,10 +103,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
       return;
     }
 
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-    );
-
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
     _controller = controller;
 
     try {
@@ -143,9 +145,28 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CommentsScreen(
-          videoId: widget.videoId,
+        builder: (_) => CommentsScreen(videoId: widget.videoId),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required Widget icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.18),
         ),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: icon,
+        iconSize: 31,
+        color: Colors.white,
       ),
     );
   }
@@ -169,9 +190,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
         else if (_controller == null ||
             !_controller!.value.isInitialized)
           const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFFFFD600),
-            ),
+            child: CircularProgressIndicator(color: turboYellow),
           )
         else
           GestureDetector(
@@ -194,25 +213,75 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
             ),
           ),
 
-        Positioned(
-          left: 16,
-          right: 85,
-          bottom: 35,
-          child: Text(
-            caption,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              shadows: [
-                Shadow(color: Colors.black, blurRadius: 8),
-              ],
+        // ზედა და ქვედა მუქი გრადიენტი
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.65),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
+                  stops: const [0.0, 0.25, 0.55, 1.0],
+                ),
+              ),
             ),
           ),
         ),
 
+        // ზედა ლოგო და სათაური
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 12,
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'TURBO',
+                    style: TextStyle(
+                      color: turboYellow,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'შენთვის',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: turboYellow,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // მარჯვენა ღილაკები
         Positioned(
-          right: 14,
-          bottom: 45,
+          right: 12,
+          bottom: 105,
           child: Column(
             children: [
               StreamBuilder<bool>(
@@ -220,39 +289,40 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
                 builder: (context, snapshot) {
                   final liked = snapshot.data ?? false;
 
-                  return IconButton(
-                    onPressed: _toggleLike,
-                    iconSize: 36,
+                  return _actionButton(
+                    onTap: _toggleLike,
                     icon: Icon(
-                      liked
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: liked ? Colors.red : Colors.white,
+                      liked ? Icons.favorite : Icons.favorite_border,
+                      color: liked ? Colors.redAccent : Colors.white,
                     ),
                   );
                 },
               ),
+
+              const SizedBox(height: 7),
 
               StreamBuilder<int>(
                 stream: _likeService.likeCount(widget.videoId),
                 builder: (context, snapshot) {
                   return Text(
                     '${snapshot.data ?? 0}',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   );
                 },
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-              IconButton(
-                onPressed: _openComments,
-                iconSize: 34,
-                icon: const Icon(
-                  Icons.comment_outlined,
-                  color: Colors.white,
-                ),
+              _actionButton(
+                onTap: _openComments,
+                icon: const Icon(Icons.chat_bubble_outline),
               ),
+
+              const SizedBox(height: 7),
 
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance
@@ -261,15 +331,46 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
                     .collection('comments')
                     .snapshots(),
                 builder: (context, snapshot) {
-                  final count = snapshot.data?.docs.length ?? 0;
-
                   return Text(
-                    '$count',
-                    style: const TextStyle(color: Colors.white),
+                    '${snapshot.data?.docs.length ?? 0}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   );
                 },
               ),
+
+              const SizedBox(height: 22),
+
+              const Icon(
+                Icons.play_circle_outline,
+                color: turboYellow,
+                size: 35,
+              ),
             ],
+          ),
+        ),
+
+        // ვიდეოს აღწერა
+        Positioned(
+          left: 18,
+          right: 85,
+          bottom: 35,
+          child: Text(
+            caption.isEmpty ? 'TURBO ვიდეო' : caption,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+              shadows: [
+                Shadow(color: Colors.black, blurRadius: 8),
+              ],
+            ),
           ),
         ),
       ],
