@@ -12,21 +12,22 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const VyroApp());
+  runApp(const TurboApp());
 }
 
-class VyroApp extends StatelessWidget {
-  const VyroApp({super.key});
+class TurboApp extends StatelessWidget {
+  const TurboApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'VYRO',
+      title: 'TURBO',
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF101010),
+        scaffoldBackgroundColor: const Color(0xFF080808),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFFFD600),
+          primary: Color(0xFFFF2020),
+          secondary: Color(0xFFFF5A36),
         ),
       ),
       home: const AuthGate(),
