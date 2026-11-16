@@ -80,8 +80,47 @@ service cloud.firestore {
         && request.resource.data.viewsCount == 0;
 
       allow update: if signedIn()
-        && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['likesCount'])
+  && request.resource.data.diff(resource.data)
+    .affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+  && (
+    (
+      request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(['likesCount'])
+      && request.resource.data.likesCount is int
+      && (
+        (
+          request.resource.data.likesCount == resource.data.likesCount + 1
+          && getAfter(
+            /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+          ).data.userId == request.auth.uid
+        )
+        ||
+        (
+          request.resource.data.likesCount == resource.data.likesCount - 1
+          && !existsAfter(
+            /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+          )
+          && exists(
+            /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+          )
+        )
+      )
+    )
+    ||
+    (
+      request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(['commentsCount'])
+      && request.resource.data.commentsCount is int
+      && request.resource.data.commentsCount >= 0
+      && (
+        request.resource.data.commentsCount == resource.data.commentsCount + 1
+        || request.resource.data.commentsCount == resource.data.commentsCount - 1
+      )
+      && existsAfter(
+        /databases/$(database)/documents/videos/$(videoId)/comments/$(request.auth.uid)
+      ) == false
+    )
+  );
         && request.resource.data.likesCount is int
         && (
           (
