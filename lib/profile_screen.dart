@@ -16,7 +16,7 @@ class ProfileScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min, children: [
             const CircleAvatar(radius: 42, child: Icon(Icons.person, size: 42)),
             const SizedBox(height: 12),
-            Text(data['displayName'] ?? user.displayName ?? 'VYRO user',
+            Text(data['displayName'] ?? user.displayName ?? 'TURBO user',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             Text('@${data['username'] ?? ''}', style: const TextStyle(color: Colors.white54)),
             const SizedBox(height: 12),
