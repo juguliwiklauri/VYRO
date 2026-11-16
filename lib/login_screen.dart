@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'VYRO',
+                   'TURBO' ,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFFFFD600),
