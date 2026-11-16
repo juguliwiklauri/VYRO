@@ -254,13 +254,14 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
                 ),
               ),
 
-              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance
                     .collection('videos')
                     .doc(widget.videoId)
+                    .collection('comments')
                     .snapshots(),
                 builder: (context, snapshot) {
-                  final count = snapshot.data?.data()?['commentsCount'] ?? 0;
+                  final count = snapshot.data?.docs.length ?? 0;
 
                   return Text(
                     '$count',
