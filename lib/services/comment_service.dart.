@@ -1,0 +1,107 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class CommentService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> addComment({
+    required String videoId,
+    required String text,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('კომენტარის დასაწერად გაიარე ავტორიზაცია.');
+    }
+
+    final message = text.trim();
+
+    if (message.isEmpty) {
+      throw Exception('კომენტარი ცარიელი არ უნდა იყოს.');
+    }
+
+    if (message.length > 1000) {
+      throw Exception('კომენტარი მაქსიმუმ 1000 სიმბოლოა.');
+    }
+
+    final videoRef = _db.collection('videos').doc(videoId);
+    final commentRef = videoRef.collection('comments').doc();
+
+    final userDoc = await _db.collection('users').doc(user.uid).get();
+    final username =
+        userDoc.data()?['username'] ?? user.displayName ?? 'მომხმარებელი';
+
+    await _db.runTransaction((transaction) async {
+      final video = await transaction.get(videoRef);
+
+      if (!video.exists) {
+        throw Exception('ვიდეო ვერ მოიძებნა.');
+      }
+
+      final count =
+          (video.data()?['commentsCount'] as num?)?.toInt() ?? 0;
+
+      transaction.set(commentRef, {
+        'commentId': commentRef.id,
+        'userId': user.uid,
+        'username': username,
+        'text': message,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(videoRef, {
+        'commentsCount': count + 1,
+      });
+    });
+  }
+
+  Future<void> deleteComment({
+    required String videoId,
+    required String commentId,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('საჭიროა ავტორიზაცია.');
+    }
+
+    final videoRef = _db.collection('videos').doc(videoId);
+    final commentRef =
+        videoRef.collection('comments').doc(commentId);
+
+    await _db.runTransaction((transaction) async {
+      final video = await transaction.get(videoRef);
+      final comment = await transaction.get(commentRef);
+
+      if (!video.exists || !comment.exists) {
+        throw Exception('კომენტარი ვერ მოიძებნა.');
+      }
+
+      if (comment.data()?['userId'] != user.uid) {
+        throw Exception('შეგიძლია მხოლოდ შენი კომენტარის წაშლა.');
+      }
+
+      final count =
+          (video.data()?['commentsCount'] as num?)?.toInt() ?? 0;
+
+      transaction.delete(commentRef);
+
+      transaction.update(videoRef, {
+        'commentsCount': count > 0 ? count - 1 : 0,
+      });
+    });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getComments(
+    String videoId,
+  ) {
+    return _db
+        .collection('videos')
+        .doc(videoId)
+        .collection('comments')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+}
