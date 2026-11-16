@@ -1,48 +1,75 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
-import 'services/auth_service.dart';
+
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'upload_screen.dart';
+import 'video_feed_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
 class _HomeScreenState extends State<HomeScreen> {
   int tab = 0;
+
+  Future<void> _openUpload() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const UploadScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const _FeedPlaceholder(),
+      const VideoFeedScreen(),
       const SearchScreen(),
       const ProfileScreen(),
     ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('VYRO', style: TextStyle(
-        color: Color(0xFFFFD600), fontWeight: FontWeight.bold, fontSize: 26)),
-        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none))]),
-      body: pages[tab],
+      backgroundColor: const Color(0xFF101010),
+      body: IndexedStack(
+        index: tab,
+        children: pages,
+      ),
+      floatingActionButton: tab == 0
+          ? FloatingActionButton(
+              backgroundColor: const Color(0xFFFFD600),
+              foregroundColor: Colors.black,
+              onPressed: _openUpload,
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: tab, onDestinationSelected: (v) => setState(() => tab = v),
+        backgroundColor: const Color(0xFF101010),
+        indicatorColor: const Color(0xFFFFD600),
+        selectedIndex: tab,
+        onDestinationSelected: (value) {
+          setState(() => tab = value);
+        },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'მთავარი'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'ძიება'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'პროფილი'),
-        ]),
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'მთავარი',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.search),
+            label: 'ძიება',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'პროფილი',
+          ),
+        ],
+      ),
     );
   }
-}
-class _FeedPlaceholder extends StatelessWidget {
-  const _FeedPlaceholder();
-  @override
-  Widget build(BuildContext context) => const Center(child: Column(
-    mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.play_circle_outline, size: 76, color: Color(0xFFFFD600)),
-      SizedBox(height: 12),
-      Text('VYRO ვიდეოების სივრცე'),
-      SizedBox(height: 6),
-      Text('ვიდეოების ატვირთვისა და feed-ის მოდული შემდეგ ეტაპზე დაემატება.',
-        textAlign: TextAlign.center, style: TextStyle(color: Colors.white54)),
-    ]));
 }
