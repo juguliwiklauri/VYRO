@@ -8,95 +8,157 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // მომხმარებლების პროფილები
     match /users/{uid} {
       allow read: if signedIn();
 
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.uid == uid;
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'username',
+          'email',
+          'photoUrl',
+          'bio',
+          'followersCount',
+          'followingCount',
+          'createdAt'
+        ])
+        && request.resource.data.followersCount == 0
+        && request.resource.data.followingCount == 0;
 
-      allow update, delete: if signedIn()
-        && request.auth.uid == uid;
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'displayName',
+            'photoUrl',
+            'bio'
+          ]);
+
+      allow delete: if false;
     }
 
+    // მომხმარებლის სახელები
     match /usernames/{username} {
       allow read: if signedIn();
 
       allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.username == username
-        && !exists(
-          /databases/$(database)/documents/usernames/$(username)
-        );
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'username'
+        ]);
 
       allow update, delete: if false;
     }
 
+    // ვიდეოები
     match /videos/{videoId} {
-
-      function likePath() {
-        return /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid);
-      }
-
-      function validLikeChange() {
-        let path = likePath();
-
-        return request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly(['likesCount'])
-          && (
-            (!exists(path)
-              && existsAfter(path)
-              && request.resource.data.likesCount
-                == resource.data.likesCount + 1)
-            ||
-            (exists(path)
-              && !existsAfter(path)
-              && request.resource.data.likesCount
-                == resource.data.likesCount - 1)
-          );
-      }
-
-      allow read: if signedIn();
+      allow read: if true;
 
       allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'videoId',
+          'userId',
+          'caption',
+          'videoUrl',
+          'storagePath',
+          'createdAt',
+          'likesCount',
+          'commentsCount',
+          'viewsCount'
+        ])
+        && request.resource.data.likesCount == 0
+        && request.resource.data.commentsCount == 0
+        && request.resource.data.viewsCount == 0;
 
       allow update: if signedIn()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['likesCount'])
+        && request.resource.data.likesCount is int
         && (
-          resource.data.userId == request.auth.uid
-          || validLikeChange()
+          (
+            request.resource.data.likesCount ==
+              resource.data.likesCount + 1
+            && getAfter(
+              /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+            ).data.userId == request.auth.uid
+          )
+          ||
+          (
+            request.resource.data.likesCount ==
+              resource.data.likesCount - 1
+            && !existsAfter(
+              /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+            )
+            && exists(
+              /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid)
+            )
+          )
         );
 
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
 
+      // მოწონებები
       match /likes/{userId} {
         allow read: if signedIn();
 
-        allow create: if signedIn()
-          && request.auth.uid == userId
-          && request.resource.data.userId == userId;
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.keys().hasOnly([
+            'userId',
+            'createdAt'
+          ]);
 
-        allow delete: if signedIn()
-          && request.auth.uid == userId;
-
+        allow delete: if isOwner(userId);
         allow update: if false;
       }
 
+      // კომენტარები
       match /comments/{commentId} {
-        allow read: if signedIn();
+        allow read: if true;
 
         allow create: if signedIn()
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.keys().hasOnly([
+            'commentId',
+            'userId',
+            'username',
+            'text',
+            'createdAt'
+          ]);
 
         allow delete: if signedIn()
           && resource.data.userId == request.auth.uid;
 
         allow update: if false;
       }
+    }
+
+    // საჩუქრების ტრანზაქციები — მხოლოდ სერვერს
+    match /giftTransactions/{transactionId} {
+      allow read, write: if false;
+    }
+
+    // პლატფორმის შემოსავალი — მხოლოდ სერვერს
+    match /platformStats/{statId} {
+      allow read, write: if false;
+    }
+
+    // LIVE მონაცემები — სანამ სერვერული მართვა დაემატება
+    match /lives/{liveId} {
+      allow read, write: if false;
     }
   }
 }
