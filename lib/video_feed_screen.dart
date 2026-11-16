@@ -193,18 +193,19 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
             child: CircularProgressIndicator(color: turboYellow),
           )
         else
-          GestureDetector(
-            onTap: () {
-              final controller = _controller!;
+         GestureDetector(
+  onTap: () {
+    final controller = _controller!;
 
-              if (controller.value.isPlaying) {
-                controller.pause();
-              } else {
-                controller.play();
-              }
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
 
-              setState(() {});
-            },
+    setState(() {});
+  },
+  onDoubleTap: _toggleLike,
             child: Center(
               child: AspectRatio(
                 aspectRatio: _controller!.value.aspectRatio,
