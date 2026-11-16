@@ -10,8 +10,11 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
+
       allow create: if signedIn()
-        && request.auth.uid == uid;
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+
       allow update, delete: if signedIn()
         && request.auth.uid == uid;
     }
@@ -30,17 +33,56 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
+
+      function validLikeCountChange() {
+        let likePath =
+          /databases/$(database)/documents/videos/$(videoId)/likes/$(request.auth.uid);
+
+        return request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['likesCount'])
+          && (
+            (
+              !exists(likePath)
+              && existsAfter(likePath)
+              && request.resource.data.likesCount
+                  == resource.data.likesCount + 1
+            )
+            ||
+            (
+              exists(likePath)
+              && !existsAfter(likePath)
+              && request.resource.data.likesCount
+                  == resource.data.likesCount - 1
+            )
+          );
+      }
+
       allow read: if signedIn();
 
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid;
 
       allow update: if signedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
+        && (
+          resource.data.userId == request.auth.uid
+          || validLikeCountChange()
+        );
 
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
+
+      match /likes/{userId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.userId == userId;
+
+        allow delete: if signedIn()
+          && request.auth.uid == userId;
+
+        allow update: if false;
+      }
     }
   }
 }
