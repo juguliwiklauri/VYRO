@@ -4,11 +4,12 @@ workflows:
     name: VYRO Android APK
     max_build_duration: 60
     instance_type: linux
+
     environment:
       flutter: stable
 
     scripts:
-      - name: Prepare and build VYRO
+      - name: Prepare VYRO project
         script: |
           set -e
 
@@ -19,10 +20,14 @@ workflows:
           import sys
 
           root = pathlib.Path.cwd()
+
           archives = sorted(
               [p for p in root.iterdir()
                if p.is_file() and p.suffix.lower() == ".zip"],
-              key=lambda p: (0 if "vyro_upload" in p.name.lower() else 1, p.name)
+              key=lambda p: (
+                  0 if "vyro_upload" in p.name.lower() else 1,
+                  p.name
+              )
           )
 
           selected = None
@@ -46,25 +51,37 @@ workflows:
 
           archive, pubspec = selected
           prefix = str(pathlib.PurePosixPath(pubspec).parent)
+
           if prefix == ".":
               prefix = ""
 
           dest = root / "vyro_project"
+
           if dest.exists():
               shutil.rmtree(dest)
+
           dest.mkdir()
 
           with zipfile.ZipFile(archive) as z:
               for item in z.infolist():
                   path = pathlib.PurePosixPath(item.filename)
+
                   if path.is_absolute() or ".." in path.parts:
                       continue
+
                   if prefix and not str(path).startswith(prefix + "/"):
                       continue
-                  rel = path.relative_to(pathlib.PurePosixPath(prefix)) if prefix else path
+
+                  rel = (
+                      path.relative_to(pathlib.PurePosixPath(prefix))
+                      if prefix else path
+                  )
+
                   if not rel.parts:
                       continue
+
                   target = dest.joinpath(*rel.parts)
+
                   if item.is_dir():
                       target.mkdir(parents=True, exist_ok=True)
                   else:
@@ -72,12 +89,36 @@ workflows:
                       with z.open(item) as src, target.open("wb") as out:
                           shutil.copyfileobj(src, out)
 
-          print("Flutter project prepared:", archive.name)
+          print("VYRO project extracted:", archive.name)
           PY
 
+      - name: Configure Android and Firebase
+        script: |
+          set -e
           cd vyro_project
+
           flutter create --platforms=android .
+
+          if [ ! -f ../google-services.json ]; then
+            echo "ERROR: google-services.json not found in repository root"
+            exit 1
+          fi
+
+          mkdir -p android/app
+          cp ../google-services.json android/app/google-services.json
+
+          echo "Firebase configuration file copied."
+
+      - name: Install dependencies
+        script: |
+          set -e
+          cd vyro_project
           flutter pub get
+
+      - name: Build VYRO APK
+        script: |
+          set -e
+          cd vyro_project
           flutter build apk --release
 
     artifacts:
