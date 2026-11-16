@@ -1,5 +1,5 @@
 
-name: VYRO Android APK
+name: TURBO Android APK
 
 on:
   workflow_dispatch:
@@ -29,6 +29,10 @@ jobs:
       - name: Create Android project files
         run: flutter create --platforms=android .
 
+      - name: Set app name to TURBO
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="TURBO"/' android/app/src/main/AndroidManifest.xml
+
       - name: Disable incompatible Android lint task
         run: |
           cat >> android/build.gradle.kts <<'EOF'
@@ -51,5 +55,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: VYRO-APK
+          name: TURBO-APK
           path: build/app/outputs/flutter-apk/app-release.apk
