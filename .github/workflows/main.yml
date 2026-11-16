@@ -29,9 +29,39 @@ jobs:
       - name: Create Android project files
         run: flutter create --platforms=android .
 
-      - name: Set app name to TURBO
+      - name: Set TURBO name and launcher logo
         run: |
           sed -i 's/android:label="[^"]*"/android:label="TURBO"/' android/app/src/main/AndroidManifest.xml
+
+          mkdir -p android/app/src/main/res/drawable
+
+          cat > android/app/src/main/res/drawable/ic_turbo_launcher.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+
+              <path
+                  android:fillColor="#080808"
+                  android:pathData="M16,10 H92 V98 H16 Z"/>
+
+              <path
+                  android:fillColor="#FF2020"
+                  android:pathData="M16,10 H92 V17 H16 Z"/>
+
+              <path
+                  android:fillColor="#EAEAEA"
+                  android:pathData="M25,28 H83 V43 H61 V85 H47 V43 H25 Z"/>
+
+              <path
+                  android:fillColor="#FF2020"
+                  android:pathData="M65,57 L86,69 L65,81 Z"/>
+
+          </vector>
+          EOF
+
+          sed -i 's#android:icon="[^"]*"#android:icon="@drawable/ic_turbo_launcher"#' android/app/src/main/AndroidManifest.xml
 
       - name: Disable incompatible Android lint task
         run: |
