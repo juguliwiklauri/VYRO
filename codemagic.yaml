@@ -20,7 +20,6 @@ workflows:
           import sys
 
           root = pathlib.Path.cwd()
-
           archives = sorted(
               [p for p in root.iterdir()
                if p.is_file() and p.suffix.lower() == ".zip"],
@@ -97,17 +96,38 @@ workflows:
           set -e
           cd vyro_project
 
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path("pubspec.yaml")
+          content = p.read_text()
+
+          if re.search(r'(?m)^\s*intl\s*:', content):
+              content = re.sub(
+                  r'(?m)^(\s*intl\s*:\s*).+$',
+                  r'\g<1>^0.20.3',
+                  content
+              )
+          else:
+              content = content.replace(
+                  "  cupertino_icons: ^1.0.8",
+                  "  cupertino_icons: ^1.0.8\n  intl: ^0.20.3"
+              )
+
+          p.write_text(content)
+          print("Updated intl dependency to ^0.20.3")
+          PY
+
           flutter create --platforms=android .
 
           if [ ! -f ../google-services.json ]; then
-            echo "ERROR: google-services.json not found in repository root"
+            echo "ERROR: google-services.json not found"
             exit 1
           fi
 
           mkdir -p android/app
           cp ../google-services.json android/app/google-services.json
-
-          echo "Firebase configuration file copied."
 
       - name: Install dependencies
         script: |
