@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'services/auth_service.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 
