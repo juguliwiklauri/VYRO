@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import 'services/like_service.dart';
+
 class VideoFeedScreen extends StatelessWidget {
   const VideoFeedScreen({super.key});
 
@@ -10,18 +12,6 @@ class VideoFeedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text(
-          'VYRO',
-          style: TextStyle(
-            color: Color(0xFFFFD600),
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        ),
-        centerTitle: true,
-      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('videos')
@@ -62,6 +52,7 @@ class VideoFeedScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               return VideoFeedItem(
                 key: ValueKey(videos[index].id),
+                videoId: videos[index].id,
                 data: videos[index].data(),
               );
             },
@@ -73,10 +64,12 @@ class VideoFeedScreen extends StatelessWidget {
 }
 
 class VideoFeedItem extends StatefulWidget {
+  final String videoId;
   final Map<String, dynamic> data;
 
   const VideoFeedItem({
     super.key,
+    required this.videoId,
     required this.data,
   });
 
@@ -85,6 +78,8 @@ class VideoFeedItem extends StatefulWidget {
 }
 
 class _VideoFeedItemState extends State<VideoFeedItem> {
+  final LikeService _likeService = LikeService();
+
   VideoPlayerController? _controller;
   bool _hasError = false;
 
@@ -98,7 +93,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
     final url = widget.data['videoUrl'] as String?;
 
     if (url == null || url.isEmpty) {
-      setState(() => _hasError = true);
+      if (mounted) setState(() => _hasError = true);
       return;
     }
 
@@ -131,6 +126,18 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
     super.dispose();
   }
 
+  Future<void> _toggleLike() async {
+    try {
+      await _likeService.toggleLike(widget.videoId);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('მოწონება ვერ მოხერხდა: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final caption = widget.data['caption'] as String? ?? '';
@@ -139,6 +146,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
       fit: StackFit.expand,
       children: [
         Container(color: Colors.black),
+
         if (_hasError)
           const Center(
             child: Text(
@@ -157,11 +165,13 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
           GestureDetector(
             onTap: () {
               final controller = _controller!;
+
               if (controller.value.isPlaying) {
                 controller.pause();
               } else {
                 controller.play();
               }
+
               setState(() {});
             },
             child: Center(
@@ -171,6 +181,7 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
               ),
             ),
           ),
+
         Positioned(
           left: 16,
           right: 80,
@@ -181,21 +192,50 @@ class _VideoFeedItemState extends State<VideoFeedItem> {
               color: Colors.white,
               fontSize: 16,
               shadows: [
-                Shadow(
-                  color: Colors.black,
-                  blurRadius: 8,
-                ),
+                Shadow(color: Colors.black, blurRadius: 8),
               ],
             ),
           ),
         ),
-        const Positioned(
-          right: 20,
+
+        Positioned(
+          right: 16,
           bottom: 45,
-          child: Icon(
-            Icons.favorite_border,
-            color: Colors.white,
-            size: 34,
+          child: Column(
+            children: [
+              StreamBuilder<bool>(
+                stream: _likeService.isLiked(widget.videoId),
+                builder: (context, snapshot) {
+                  final liked = snapshot.data ?? false;
+
+                  return IconButton(
+                    onPressed: _toggleLike,
+                    iconSize: 36,
+                    icon: Icon(
+                      liked
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: liked
+                          ? Colors.red
+                          : Colors.white,
+                    ),
+                  );
+                },
+              ),
+
+              StreamBuilder<int>(
+                stream: _likeService.likeCount(widget.videoId),
+                builder: (context, snapshot) {
+                  return Text(
+                    '${snapshot.data ?? 0}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ],
