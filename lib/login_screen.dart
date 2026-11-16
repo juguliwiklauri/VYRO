@@ -50,7 +50,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 return;
               }
               try {
-                await AuthService().sendPasswordReset(email.text);
+               await AuthService().signIn(
+  email: email.text.trim(),
+  password: password.text,
+);
                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('პაროლის აღდგენის წერილი გაიგზავნა.')));
               } catch (e) { setState(() => error = e.toString()); }
