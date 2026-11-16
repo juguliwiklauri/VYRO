@@ -33,10 +33,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('რეგისტრაცია')),
     body: ListView(padding: const EdgeInsets.all(24), children: [
-      TextField(controller: username, decoration: const InputDecoration(labelText: 'მომხმარებლის სახელი (მაგ. turbo_user)')),
-      const SizedBox(height: 12),
-      TextField(controller: username, decoration: const InputDecoration(labelText: 'მომხმარებლის სახელი (მაგ. vyro_user)')),
-      const SizedBox(height: 12),
+      TextField(controller: name, decoration: const InputDecoration(labelText: 'სახელი')),
+const SizedBox(height: 12),
+TextField(controller: username, decoration: const InputDecoration(labelText: 'მომხმარებლის სახელი (მაგ. turbo_user)')),
+const SizedBox(height: 12),
       TextField(controller: email, keyboardType: TextInputType.emailAddress,
         decoration: const InputDecoration(labelText: 'ელფოსტა')),
       const SizedBox(height: 12),
