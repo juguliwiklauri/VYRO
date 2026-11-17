@@ -1,6 +1,7 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_gate.dart';
 import 'firebase_options.dart';
@@ -10,6 +11,11 @@ Future<void> main() async {
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await Supabase.initialize(
+    url: 'https://jhcoczjtjfqiqigpcocw.supabase.co',
+    publishableKey: 'sb_publishable_a0Gg8Xl2u_54Bzzp5zo45A_0uLAFLJg',
   );
 
   runApp(const TurboApp());
