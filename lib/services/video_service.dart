@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VideoService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   Future<String> uploadVideo({
     required File videoFile,
@@ -29,24 +29,27 @@ class VideoService {
     }
 
     final videoId = _db.collection('videos').doc().id;
-    final extension =
-        videoFile.path.split('.').last.toLowerCase();
+    final extension = videoFile.path.split('.').last.toLowerCase();
 
     final contentType = extension == 'mov'
         ? 'video/quicktime'
         : 'video/mp4';
 
-    final storagePath = 'videos/${user.uid}/$videoId.$extension';
-    final storageRef = _storage.ref().child(storagePath);
+    final storagePath = '${user.uid}/$videoId.$extension';
 
     try {
-      final uploadTask = storageRef.putFile(
+      await _supabase.storage.from('videos').upload(
+        storagePath,
         videoFile,
-        SettableMetadata(contentType: contentType),
+        fileOptions: FileOptions(
+          contentType: contentType,
+          upsert: false,
+        ),
       );
 
-      final snapshot = await uploadTask;
-      final videoUrl = await snapshot.ref.getDownloadURL();
+      final videoUrl = _supabase.storage
+          .from('videos')
+          .getPublicUrl(storagePath);
 
       await _db.collection('videos').doc(videoId).set({
         'videoId': videoId,
@@ -63,9 +66,9 @@ class VideoService {
       return videoId;
     } catch (error) {
       try {
-        await storageRef.delete();
+        await _supabase.storage.from('videos').remove([storagePath]);
       } catch (_) {
-        // ატვირთული ფაილი შესაძლოა ჯერ არ არსებობდეს.
+        // ფაილი შესაძლოა ჯერ არ ატვირთულა.
       }
 
       rethrow;
