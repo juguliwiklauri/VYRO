@@ -1,5 +1,6 @@
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,6 +17,9 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://jhcoczjtjfqiqigpcocw.supabase.co',
     publishableKey: 'sb_publishable_a0Gg8Xl2u_54Bzzp5zo45A_0uLAFLJg',
+    accessToken: () async {
+      return await FirebaseAuth.instance.currentUser?.getIdToken();
+    },
   );
 
   runApp(const TurboApp());
